@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
+"""Map 4: identity mapper for docid, term, tf, idf."""
+
 import sys
 
-for line in sys.stdin:
-    docid, rest = line.strip().split("\t", 1)
-    term_tf_pairs = rest.split()
 
-    # iterate through term/tf pairs
-    for i in range(0, len(term_tf_pairs), 2):
-        term = term_tf_pairs[i]
-        tf = term_tf_pairs[i+1]
+def main() -> None:
+    for line in sys.stdin:
+        line = line.rstrip("\n")
+        if not line:
+            continue
+        print(line)
 
-        print(f"{term}\t{docid} {tf}")
+
+if __name__ == "__main__":
+    main()

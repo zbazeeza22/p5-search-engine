@@ -1,47 +1,47 @@
 #!/usr/bin/env python3
+"""Reduce 5: build final inverted index for one segment."""
+
 import sys
-import math
-from collections import defaultdict
 
-# We aggregate by docid to compute norms, then invert to output by term.
-doc_data = defaultdict(list) # docid -> [(term, tf, idf), ...]
 
-for line in sys.stdin:
-    # Input: partition \t docid term tf idf
-    _, rest = line.strip().split("\t", 1)
-    parts = rest.split()
-    
-    docid = parts[0]
-    term = parts[1]
-    tf = int(parts[2])
-    idf = float(parts[3])
-    
-    doc_data[docid].append((term, tf, idf))
+def main() -> None:
+    inverted = {}
 
-# Compute norms and build inverted index structure for this partition
-inverted_index = defaultdict(list) # term -> [(docid, tf, norm, idf), ...]
+    for line in sys.stdin:
+        line = line.strip()
+        if not line:
+            continue
 
-for docid, terms in doc_data.items():
-    # Calculate norm for document
-    squared_sum = sum((t[1] * t[2]) ** 2 for t in terms)
-    norm = math.sqrt(squared_sum)
-    
-    for term, tf, idf in terms:
-        inverted_index[term].append((docid, tf, norm, idf))
+        try:
+            _, rest = line.split("\t", 1)
+        except ValueError:
+            continue
 
-# Sort terms alphabetically
-sorted_terms = sorted(inverted_index.keys())
+        parts = rest.split()
+        if len(parts) != 5:
+            continue
 
-for term in sorted_terms:
-    postings = inverted_index[term]
-    # idf is the same for all postings of this term (it came from reduce4)
-    idf = postings[0][3]
-    
-    # Sort postings by docid
-    postings.sort(key=lambda x: int(x[0]))
-    
-    out_parts = []
-    for docid, tf, norm, _ in postings:
-        out_parts.extend([docid, str(tf), str(norm)])
-        
-    print(term, idf, *out_parts)
+        term = parts[0]
+        docid = parts[1]
+        tf = parts[2]
+        norm = parts[3]
+        idf = float(parts[4])
+
+        if term not in inverted:
+            inverted[term] = {"idf": idf, "postings": []}
+        inverted[term]["postings"].append((docid, tf, norm))
+
+    for term in sorted(inverted.keys()):
+        idf = inverted[term]["idf"]
+        postings = inverted[term]["postings"]
+        postings.sort(key=lambda x: x[0])
+
+        out_parts = [term, str(idf)]
+        for docid, tf, norm in postings:
+            out_parts.extend([docid, tf, norm])
+
+        print(" ".join(out_parts))
+
+
+if __name__ == "__main__":
+    main()

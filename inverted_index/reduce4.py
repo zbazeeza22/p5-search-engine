@@ -1,32 +1,57 @@
 #!/usr/bin/env python3
+"""Reduce 4: compute document norms and emit term-keyed postings."""
+
 import sys
 import math
 
-# Load total document count
-with open("total_document_count.txt") as f:
-    N = int(f.read().strip())
 
-current_term = None
-postings = []
+def flush_doc(docid: str, postings: list) -> None:
+    if not postings:
+        return
+    squared_sum = 0.0
+    for term, tf, idf in postings:
+        weight = tf * idf
+        squared_sum += weight * weight
+    norm = math.sqrt(squared_sum)
+    for term, tf, idf in postings:
+        sys.stdout.write(f"{term}\t{docid} {tf} {norm} {idf}\n")
 
-def flush_term(term, postings):
-    df = len(postings)
-    idf = math.log10(N / df)
-    
-    for docid, tf in postings:
-        print(f"{docid}\t{term} {tf} {idf}")
 
-for line in sys.stdin:
-    term, rest = line.strip().split("\t")
-    docid, tf = rest.split()
-    
-    if term != current_term:
-        if current_term is not None:
-            flush_term(current_term, postings)
-        current_term = term
-        postings = []
-    
-    postings.append((docid, tf))
+def main() -> None:
+    current_docid = None
+    postings = []
 
-if current_term is not None:
-    flush_term(current_term, postings)
+    for line in sys.stdin:
+        line = line.strip()
+        if not line:
+            continue
+
+        try:
+            docid, rest = line.split("\t", 1)
+        except ValueError:
+            continue
+
+        parts = rest.split()
+        if len(parts) != 3:
+            continue
+        term = parts[0]
+        try:
+            tf = int(parts[1])
+            idf = float(parts[2])
+        except ValueError:
+            continue
+
+        if docid != current_docid:
+            if current_docid is not None:
+                flush_doc(current_docid, postings)
+            current_docid = docid
+            postings = []
+
+        postings.append((term, tf, idf))
+
+    if current_docid is not None:
+        flush_doc(current_docid, postings)
+
+
+if __name__ == "__main__":
+    main()
